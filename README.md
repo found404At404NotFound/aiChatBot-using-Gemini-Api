@@ -68,5 +68,5 @@ This project is licensed under the **MIT License** – free to use and modify.
 ---
 
 <p align="center">  
-  Made with ❤️ by Team 404 – Solving Real-World Errors  
+  Made with ❤️ by Team 404Found – Solving Real-World Errors  
 </p>
