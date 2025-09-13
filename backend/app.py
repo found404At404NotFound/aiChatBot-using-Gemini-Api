@@ -14,9 +14,9 @@ load_dotenv()
 app=Flask(__name__)
 import os
 
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DB_URI')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.secret_key = os.getenv('SECRET_KEY')
-client = genai.Client(api_key=os.getenv('GENAI_API_KEY'))
+client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
 app.permanent_session_lifetime = timedelta(days=7) 
 CORS(app, resources={r"/*": {"origins": "http://127.0.0.1:5501"}}, supports_credentials=True)
@@ -29,9 +29,18 @@ class User(db.Model):
     name = db.Column(db.String(30), nullable=False)
     gender = db.Column(db.String(1), nullable=False)
     password = db.Column(db.String(255), nullable=False)
+
+
+class PendingUser(db.Model):
+
+    __tablename__ = 'pending_user'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    email = db.Column(db.String(50), unique=True, nullable=False)
+    name = db.Column(db.String(30), nullable=False)
+    gender = db.Column(db.String(1), nullable=False)
+    password = db.Column(db.String(255), nullable=False)
     otp = db.Column(db.Integer, nullable=True, autoincrement=False)
     otpcorrect = db.Column(db.Integer, nullable=False, autoincrement=False,default=0)
-
 
 
 
@@ -40,89 +49,148 @@ class User(db.Model):
 def home():
     return redirect('/login')
 
-
-@app.route('/login',methods=['GET','POST'])
+@app.route('/login', methods=['GET','POST'])
 def login():
-    if request.method=='POST':
-        user=request.json
-        email=user.get('email')
-        psw=user.get('password')
+    if request.method == 'POST':
+        user = request.json
+        email = user.get('email')
+        psw = user.get('password')
         user_record = User.query.filter_by(email=email).first()
-        if user_record and cph(user_record.password, psw):
-            session['user_id'] = user_record.id
-            if user.get('remember',False):
-                session.permanent = True
-            return jsonify({'success': 'True',
-                            'message': 'Login successful',
-                                'code': 200}) , 200
-        
+
         if not user_record:
-            return jsonify({'success': 'False',
-                            'message': 'User not found',
-                        'code': 403}), 403
-    
+            return jsonify({
+                'success': 'False',
+                'message': 'User not found',
+                'code': 403
+            }), 403
+
+        if not cph(user_record.password, psw):
+            return jsonify({
+                'success': 'False',
+                'message': 'Invalid password',
+                'code': 401
+            }), 401
+
+        
+        session['user_id'] = user_record.id
+        if user.get('remember', False):
+            session.permanent = True
+
+        return jsonify({
+            'success': 'True',
+            'message': 'Login successful',
+            'code': 200
+        }), 200
+
     return jsonify({
         "message": "Send POST request with {email, password, remember} to login"
     }), 200
-
-@app.route('/register',methods=['GET','POST'])
+@app.route('/register', methods=['POST'])
 def register():
     if request.method == 'POST':
-        user=request.json
-        email=user.get('email')
+        user = request.json
+        email = user.get('email')
+
+        
         if User.query.filter_by(email=email).first():
-            return jsonify({'success': 'False',
-                            'message': 'Email already exists',
-                        'code': 409}), 409
-        psw=user.get('password')
-        name=user.get('name')
-        gender=user.get('gender')
-        otp=sendOTP(email)
-        print(otp)
-        
-        session['reg-det']={'email':email,'name':name,'gender':gender,'otp':otp,'password':psw}
-    
-        return jsonify({'success': 'True',
-                            'message': 'otp sent to'+email,
-                            
-                            'code': 200}) , 200
+            return jsonify({
+                'success': 'False',
+                'message': 'Email already exists',
+                'code': 409
+            }), 409
 
-    return jsonify({'message': 'Send POST request with {email, password, name, gender, otp} to register'}), 200
+        psw = user.get('password')
+        name = user.get('name')
+        gender = user.get('gender')
+
+        # Generate OTP
+        otp = sendOTP(email)
+        print("Generated OTP:", otp)
+
+        
+        pendingUser = PendingUser.query.filter_by(email=email).first()
+        if pendingUser:
+            pendingUser.name = name
+            pendingUser.gender = 'M' if gender.lower() =='male' else 'F'
+            pendingUser.password = gph(psw)
+            pendingUser.otp = otp
+        else:
+            pendingUser = PendingUser(
+                email=email,
+                name=name,
+                gender= 'M' if gender.lower() =='male' else 'F',
+                password=gph(psw),
+                otp=otp
+            )
+            db.session.add(pendingUser)
+
+        db.session.commit()
+        session['reg-email'] = {'email': email}
+
+        return jsonify({
+            'success': 'True',
+            'message': f'OTP sent to {email}',
+            'code': 200
+        }), 200
         
 
-@app.route('/register/verify',methods=['POST','GET'])
+@app.route('/register/verify', methods=['POST'])
 def verify():
     if request.method == 'POST':
-        otpEntered = request.json.get('otp')       
-        otp = session.get('reg-det').get('otp')
+        otpEntered = request.json.get('otp')
+        email = session.get('reg-email', {}).get('email')
 
-        
-        
-        if otpEntered is not None and otp is not None and str(otpEntered).strip() == str(otp).strip():
+        if not email:
+            return jsonify({
+                'success': 'False',
+                'message': 'Session expired or invalid',
+                'code': 400
+            }), 400
 
-            session['reg-otp'] = None
-            userCheck=User.query.filter_by(email=session.get('reg-det').get('email')).first()
-            if userCheck:
-                return jsonify({'success': 'False',
-                            'message': 'Email already registered',
-                        'code': 409}), 409
-            user_record = User(email=session.get('reg-det').get('email'),
-                           name=session.get('reg-det').get('name'),
-                           gender='M' if session.get('reg-det').get('gender').lower() == 'male' else 'F',
-                           password=gph(session.get('reg-det').get('password')),otp=otp)
-                                        
-            print(user_record.otp)
+        pendingUser = PendingUser.query.filter_by(email=email).first()
+
+        if not pendingUser:
+            return jsonify({
+                'success': 'False',
+                'message': 'No pending registration found',
+                'code': 404
+            }), 404
+
+        # Check OTP
+        if otpEntered and str(otpEntered).strip() == str(pendingUser.otp).strip():
+            
+            if User.query.filter_by(email=pendingUser.email).first():
+                return jsonify({
+                    'success': 'False',
+                    'message': 'Email already registered',
+                    'code': 409
+                }), 409
+
+            
+            user_record = User(
+                email=pendingUser.email,
+                name=pendingUser.name,
+                gender=pendingUser.gender,
+                password=pendingUser.password
+            )
+
             db.session.add(user_record)
+            db.session.delete(pendingUser)  # clean pending entry
             db.session.commit()
-            session.pop('reg-det', None)
-            return jsonify({'success': 'True',
-                            'message': 'Registration successful',
-                        'code': 200}) , 200
-        return jsonify({'success': 'False',
-                    'message': 'Invalid OTP',
-                    'code': 403}), 403
-    
-    return jsonify({'message': 'Send POST request with otp to verify'}), 200
+
+            session.pop('reg-email', None)
+
+            return jsonify({
+                'success': 'True',
+                'message': 'Registration successful',
+                'code': 200
+            }), 200
+
+        return jsonify({
+            'success': 'False',
+            'message': 'Invalid OTP',
+            'code': 403
+        }), 403
     
 
 @app.route('/forgot-password/', methods=['GET', 'POST'])
@@ -133,9 +201,19 @@ def forgot_password():
         user_record = User.query.filter_by(email=userEmail).first()
         if user_record:
             otp = sendOTP(userEmail)
-            session['forgot-password'] = {'email': userEmail, 'otp': otp}
+            session['forgot-password'] = {'email': userEmail}
+            pendingUser=PendingUser.query.filter_by(email=userEmail).first()
+            if pendingUser:
+                pendingUser.otp = otp
+                db.session.commit()
+            else:
+                pendingUser=PendingUser(email=userEmail,name=user_record.name, gender='M' if user_record.gender.lower()=='male' else 'F',
+                                         password=user_record.password, otp=otp)
+                db.session.add(pendingUser)
+                db.session.commit()
+                
             return jsonify({'success': 'True',
-                            'message': 'otp sent to'+userEmail,
+                            'message': 'otp sent to '+ userEmail,
                         'code': 200}) , 200
         return jsonify({'success': 'False',
                             'message': 'User not found',
@@ -148,15 +226,28 @@ def forgot_password():
 def verify_forgot_password():
     if request.method =='POST':
         otpEntered = request.json.get('otp')
-        otp = session.get('forgot-password').get('otp')
+        email=session.get('forgot-password').get('email')
+        pendingUser=PendingUser.query.filter_by(email=email).first()
+        if pendingUser is not None:
+            otp = pendingUser.otp
+        else:
+            return jsonify({'success': 'False',
+                            'message': 'Forgot-password session not found',
+                        'code': 404}), 404
+    
         
         if otpEntered is not None and otp is not None and str(otpEntered).strip() == str(otp).strip():
-            
-            session['password-reset'] = {'allow-reset': True, 'email': session.get('forgot-password').get('email')}
-            session['forgot-password'] = None
+            session['password-reset'] = {'allow-reset': True, 'email': email}
+            session.pop('forgot-password', None)
+
+    # Instead of deleting PendingUser, clear its OTP
+            pendingUser.otp = None
+            db.session.commit()
+
             return jsonify({'success': 'True',
-                            'message': 'OTP verified successfully',
-                        'code': 200}) , 200
+                    'message': 'OTP verified successfully',
+                    'code': 200}), 200
+
         return jsonify({'success': 'False',
                     'message': 'Invalid OTP',
                     'code': 403}), 403
@@ -185,4 +276,4 @@ def reset_forgot_password():
 
 
 if __name__=='__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0',port=8888)
