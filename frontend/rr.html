@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Register</title>
+<style>
+body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#A3D9A1}
+form{background:#fff;padding:40px;border-radius:15px;box-shadow:0 2px 5px rgba(0,0,0,0.1);width:300px;text-align:center}
+h1{margin-bottom:20px;font-size:24px}
+input[type="text"],input[type="email"],input[type="password"],input[type="date"]{width:95%;padding:8px;margin:8px 0;border:1px solid #ccc;border-radius:4px}
+.gender-group{display:flex;justify-content:flex-start;gap:10px;margin-top:5px}
+.gender-group label{display:flex;align-items:center;font-size:14px;margin-right:10px}
+button{width:100%;padding:10px;border:none;background:#6a0dad;color:#fff;border-radius:4px;cursor:pointer;margin-top:15px}
+button:hover{background:#5a0080}
+a.link{color:#6a0dad;text-decoration:none;display:block;margin-top:10px}
+a.link:hover{text-decoration:underline}
+#otpSection{display:none;margin-top:15px;text-align:center}
+#otpMessage{font-size:14px;color:green;margin-bottom:10px}
+p#message{font-size:14px;text-align:center;margin-top:10px}
+p#message.success{color:green}
+p#message.error{color:red}
+</style>
+</head>
+<body>
+<form id="registerForm">
+<h1>Create Account</h1>
+<input type="text" id="name" placeholder="Full Name" required>
+<input type="email" id="email" placeholder="Email" required>
+<div class="gender-group">
+<label><input type="radio" name="gender" value="Male" required> Male</label>
+<label><input type="radio" name="gender" value="Female" required> Female</label>
+</div>
+<input type="date" id="dob" placeholder="Date of Birth">
+<input type="password" id="password" placeholder="Password" required>
+<input type="password" id="cpassword" placeholder="Confirm Password" required>
+<a href="login (4).html" class="link">Sign in instead</a>
+<button type="button" id="sendOtpBtn">Send OTP</button>
+
+<div id="otpSection">
+<p id="otpMessage"></p>
+<input type="text" id="otp" placeholder="Enter OTP">
+<button type="button" id="verifyBtn">Verify & Register</button>
+</div>
+
+<p id="message"></p>
+</form>
+
+<script>
+const sendOtpBtn=document.getElementById("sendOtpBtn")
+const otpSection=document.getElementById("otpSection")
+const otpMessage=document.getElementById("otpMessage")
+const verifyBtn= document.getElementById("verifyBtn")
+const message=document.getElementById("message")
+let otpToken=null
+sendOtpBtn.addEventListener("click", async ()=>{
+  message.textContent=""
+  const name=document.getElementById("name").value
+  const email=document.getElementById("email").value
+  const password=document.getElementById("password").value
+  const cpassword=document.getElementById("cpassword").value
+  const gender=document.querySelector('input[name="gender"]:checked')?.value
+  if(!name||!email||!password||!cpassword||!gender){
+    message.textContent="Please fill all Details"
+    message.className="error"
+    return
+  }
+  if(password!==cpassword){
+    message.textContent="Password does not match"
+    message.className="error"
+    return
+  }
+  const res=await fetch("/register",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({name,email,password,gender})
+  })
+  const data=await res.json()
+  if(res.ok){
+    otpToken = data.otpToken
+    otpMessage.textContent=`OTP sent to ${email}`
+    otpSection.style.display="block"
+    sendOtpBtn.disabled=true
+  } else {
+    message.textContent=data.error
+    message.className="error"
+  }
+})
+verifyBtn.addEventListener("click",async()=>{
+  const otp=document.getElementById("otp").value
+  if(!otpToken){
+    message.textContent="OTP not sent"
+    message.className="error"
+    return
+  }
+  const res=await fetch("/register/verify",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({otp,otpToken})
+  })
+  const data=await res.json()
+  if(res.ok){
+    message.textContent="Registration successful!"
+    message.className="success"
+    setTimeout(()=>window.location.href="login.html",1500)
+  }else{
+    message.textContent=data.error
+    message.className="error"
+  }
+})
+</script>
+</body>
+</html>
+

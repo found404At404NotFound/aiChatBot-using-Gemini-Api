@@ -1,0 +1,75 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+  <meta charset="UTF-8">  
+  <title>OTP Page</title>  
+  <style>  
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #A3D9A1;
+    }
+    form {
+      background: #fff;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      width: 300px;
+    }
+    h1 {
+      margin-bottom: 20px;
+      font-size: 24px;
+      text-align: center;
+    }
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="date"] {
+      width: 95%;
+      padding: 8px;
+      margin: 8px 0;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    input[type="radio"] {
+      margin: 0 5px;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      text-align: left;
+    }
+    input[type="submit"] {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      background: #6a0dad;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 15px;
+    }
+    input[type="submit"]:hover {
+      background: #6a0dad;
+    }
+    .link {
+      color: #6a0dad;
+      text-decoration: none;
+    }
+    .link:hover {
+      text-decoration: underline;
+    }
+  </style>  
+</head>  
+<body>  
+  <form>  
+    <label for="otp"><p>OTP Sent to Email</p><p>Please Enter:</p></label>  
+    <input type="text" id="otp" name="otp" maxlength="6"  pattern="\d{1,6}"  oninput="this.value = this.value.replace(/[^0-9]/g, '')" placeholder="Enter OTP" required><br>
+    <input type="submit" value="Submit">
+  </form>
+</body>  
+</html>

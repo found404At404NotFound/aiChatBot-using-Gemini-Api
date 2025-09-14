@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Change Password</title>
+<style>
+body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#A3D9A1}
+form{background:#fff;padding:40px;border-radius:15px;box-shadow:0 2px 5px rgba(0,0,0,0.1);width:300px;text-align:center}
+h1{margin-bottom:20px;font-size:24px}
+input[type="password"]{width:95%;padding:8px;margin:8px 0;border:1px solid #ccc;border-radius:4px}
+button{width:100%;padding:10px;border:none;background:#6a0dad;color:#fff;border-radius:4px;cursor:pointer;margin-top:15px}
+button:hover{background:#5a0080}
+p#message{font-size:14px;text-align:center;margin-top:10px}
+p#message.success{color:green}
+p#message.error{color:red}
+</style>
+</head>
+<body>
+<form id="changeForm">
+<h1>Change Password</h1>
+<input type="password" id="currentPassword" placeholder="Current Password" required>
+<input type="password" id="newPassword" placeholder="New Password" required>
+<input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+<button type="button" id="changeBtn">Change Password</button>
+<p id="message"></p>
+</form>
+
+<script>
+const changeBtn=document.getElementById("changeBtn")
+const message=document.getElementById("message")
+changeBtn.addEventListener("click",async()=>{
+  message.textContent=""
+  const currentPassword=document.getElementById("currentPassword").value
+  const newPassword=document.getElementById("newPassword").value
+  const confirmPassword=document.getElementById("confirmPassword").value
+  if(!currentPassword||!newPassword||!confirmPassword){
+    message.textContent="Please fill all fields"
+    message.className="error"
+    return
+  }
+  if(newPassword!==confirmPassword){
+    message.textContent="Password does not match"
+    message.className="error"
+    return
+  }
+  const res=await fetch("/new-password",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({currentPassword,newPassword})
+  })
+  const data= await res.json()
+  if(res.ok){
+    message.textContent="Password changed successfully!"
+    message.className="success"
+    setTimeout(()=>window.location.href="login.html",1500)
+  }else{
+    message.textContent=data.error
+    message.className="error"
+  }
+})
+</script>
+</body>
+</html>
+
+      

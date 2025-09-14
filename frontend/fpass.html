@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Forgot Password</title>
+<style>
+body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#A3D9A1}
+form{background:#fff;padding:40px;border-radius:15px;box-shadow:0 2px 5px rgba(0,0,0,0.1);width:300px;text-align:center}
+h1{margin-bottom:20px;font-size:24px}
+input[type="email"],input[type="text"],input[type="password"]{width:95%;padding:8px;margin:8px 0;border:1px solid #ccc;border-radius:4px}
+button{width:100%;padding:10px;border:none;background:#6a0dad;color:#fff;border-radius:4px;cursor:pointer;margin-top:15px}
+button:hover{background:#5a0080}
+a.link{color:#6a0dad;text-decoration:none;display:block;margin-top:10px}
+a.link:hover{text-decoration:underline}
+#otpSection{display:none;margin-top:15px;text-align:center}
+#otpMessage{font-size:14px;color:green;margin-bottom:10px}
+p#message{font-size:14px;text-align:center;margin-top:10px}
+p#message.success{color:green}
+p#message.error{color:red}
+</style>
+</head>
+<body>
+<form id="forgotForm">
+<h1>Forgot Password</h1>
+<input type="email" id="email" placeholder="Enter your Email" required>
+<button type="button" id="sendOtpBtn">Send OTP</button>
+
+<div id="otpSection">
+<p id="otpMessage"></p>
+<input type="text" id="otp" placeholder="Enter OTP" required>
+<input type="password" id="newPassword" placeholder="New Password" required>
+<input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+<button type="button" id="verifyBtn">Verify & Reset Password</button>
+</div>
+
+<p id="message"></p>
+<a href="login (4).html" class="link">Back to Login</a>
+</form>
+<script>
+const sendOtpBtn=document.getElementById("sendOtpBtn")
+const otpSection=document.getElementById("otpSection")
+const otpMessage=document.getElementById("otpMessage")
+const verifyBtn=document.getElementById("verifyBtn")
+const message=document.getElementById("message")
+let otpToken=null
+sendOtpBtn.addEventListener("click",async()=>{
+  message.textContent=""
+  const email=document.getElementById("email").value
+  if(!email){
+    message.textContent="Enter your email"
+    message.className="error"
+    return
+  }
+  const res=await fetch("/forgot-password",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({email})
+  })
+  const data=await res.json()
+  if(res.ok){
+    otpToken=data.otpToken
+    otpMessage.textContent=`OTP sent to ${email}`
+    otpSection.style.display="block"
+    sendOtpBtn.disabled=true
+  }else{
+    message.textContent=data.error
+    message.className="error"
+  }
+})
+verifyBtn.addEventListener("click", async ()=>{
+  const otp=document.getElementById("otp").value
+  const newPassword=document.getElementById("newPassword").value
+  const confirmPassword=document.getElementById("confirmPassword").value
+  if(newPassword!==confirmPassword){
+    message.textContent="Passwords does not match"
+    message.className="error"
+    return
+  }
+  const res = await fetch("/forgot-password/verify",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({otp,otpToken,newPassword})
+  })
+  const data = await res.json()
+  if(res.ok){
+    message.textContent="Password reset successful!"
+    message.className="success"
+    setTimeout(()=>window.location.href="login.html",1500)
+  }else{
+    message.textContent=data.error
+    message.className="error"
+  }
+})
+</script>
+</body>
+</html>
+
+
