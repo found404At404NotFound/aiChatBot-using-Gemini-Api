@@ -1,1 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Login</title>
+<style>
+body{display:flex;justify-content:center;align-items:center;height:100vh;margin:0;font-family:Arial,sans-serif;background:#A3D9A1}
+form{background:#fff;padding:40px;border-radius:15px;box-shadow:0 2px 5px rgba(0,0,0,0.1);width:300px;text-align:center}
+h1{margin-bottom:20px;font-size:24px}
+input[type="email"],input[type="password"]{width:95%;padding:8px;margin:8px 0;border:1px solid #ccc;border-radius:4px}
+input[type="submit"],button{width:100%;padding:10px;border:none;background:#6a0dad;color:#fff;border-radius:4px;cursor:pointer;margin-top:15px}
+input[type="submit"]:hover,button:hover{background:#5a0080}
+a.link{color:#6a0dad;text-decoration:none;display:inline-block;margin:5px}
+a.link:hover{text-decoration:underline}
+p#message{font-size:14px;text-align:center;margin-top:10px}
+p#message.success{color:green}
+p#message.error{color:red}
+</style>
+</head>
+<body>
+<form id="loginForm">
+<h1>Login</h1>
+<input type="email" id="email" placeholder="Email" required>
+<input type="password" id="password" placeholder="Password" required>
+<input type="submit" value="Login">
+<div>
+<a href="fpass.html" class="link">Forgot Password?</a>
+<a href="rr.html" class="link">Sign Up</a>
+</div>
+<p id="message"></p>
+</form>
+<script>
+const loginForm=document.getElementById("loginForm")
+const message=document.getElementById("message")
+loginForm.addEventListener("submit",async(e)=>{
+  e.preventDefault()
+  message.textContent=""
+  const email=document.getElementById("email").value
+  const password=document.getElementById("password").value
+  const res=await fetch("/login", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({email,password})
+  })
+  const data=await res.json()
+  if(res.ok){
+    message.textContent=data.message||"Login successful!"
+    message.className="success"
+    setTimeout(()=>window.location.href="dashboard.html",1500)
+  }else{
+    message.textContent=data.error||"Invalid credentials"
+    message.className="error"
+  }
+})
+</script>
+</body>
+</html>
 
