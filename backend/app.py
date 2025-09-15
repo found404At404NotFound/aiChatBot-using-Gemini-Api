@@ -19,7 +19,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.secret_key = os.getenv('SECRET_KEY')
 client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
-app.permanent_session_lifetime = timedelta(days=7) 
+app.permanent_session_lifetime = timedelta(days=8) 
 origin = ['http://127.0.0.1:5501','https://progress-schools-mediterranean-heart.trycloudflare.com']
 CORS(app, resources={r"/*": {"origins": origin}}, supports_credentials=True)
 db = SQLAlchemy(app)
